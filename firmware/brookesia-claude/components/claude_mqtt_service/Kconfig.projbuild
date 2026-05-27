@@ -1,0 +1,15 @@
+menu "Claude Code Status"
+
+config CLAUDE_MQTT_BROKER_URI
+    string "MQTT broker URI"
+    default "mqtt://192.168.1.2:1883"
+    help
+        Broker URI used by the device to receive Claude Code status events.
+
+config CLAUDE_MQTT_TOPIC
+    string "MQTT status topic"
+    default "claudecode/device/default/status"
+    help
+        Topic subscribed by the Claude status app.
+
+endmenu

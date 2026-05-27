@@ -1,0 +1,16 @@
+# Offline wiki mirror (re-download with: python tools/rebuild_offline_wiki.py)
+docs/waveshare-esp32-s3-touch-lcd-1.83/
+
+# ESP-IDF generated output
+firmware/*/build/
+
+# ESP-IDF managed components can be re-resolved from package manifests
+firmware/*/managed_components/
+
+# Reference source trees are fetched on demand by tools/fetch_reference_sources.ps1
+vendor/
+_reference_sources/
+
+# Local hook/debug logs
+.claude/hook-status.log
+.claude/settings.json
