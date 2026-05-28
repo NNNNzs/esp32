@@ -9,9 +9,10 @@ Current mainline firmware is the ESP-IDF/Brookesia multi-app build in `firmware/
 - Firmware: `firmware/brookesia-claude`
 - ESP-IDF: `C:\esp\v6.0.1\esp-idf`
 - Target: `esp32s3`
-- Build: verified on 2026-05-27 with `idf.py build`
-- Board test: previously flashed to `COM3`; serial log showed the Brookesia launcher starting normally
-- First boot without Wi-Fi config: starts `ClaudeConfig-XXXX` and serves setup at `http://192.168.4.1/`
+- Build: verified on 2026-05-28 with `idf.py build`
+- Board test: flashed to `COM3`; serial log showed the Brookesia launcher starting normally
+- First boot without saved Wi-Fi: starts `ClaudeConfig-XXXX` with WPA2 and serves setup at `http://192.168.4.1/`
+- Wi-Fi settings app shows station IP, config web status, and MQTT status; it can start/stop the config web server and MQTT client
 
 ## Layout
 
@@ -40,7 +41,7 @@ Replace `COM3` with the actual port.
 
 ## Device Setup
 
-If no Wi-Fi credentials are saved, the firmware starts an open setup AP:
+If no Wi-Fi credentials are saved, the firmware starts a WPA2 setup AP:
 
 ```text
 ClaudeConfig-XXXX
@@ -53,6 +54,7 @@ http://192.168.4.1/
 ```
 
 Enter Wi-Fi SSID/password, MQTT broker URI, and topic. After saving, restart the board so it can connect in station mode.
+The `WiFi` app also shows the current station IP, whether the config web server is running, and whether the MQTT client is running.
 
 Firmware MQTT defaults:
 

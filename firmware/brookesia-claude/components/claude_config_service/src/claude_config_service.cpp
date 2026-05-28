@@ -9,6 +9,8 @@
 static const char *NVS_NAMESPACE = "claude";
 static const char *NVS_KEY_BROKER = "mqtt_broker";
 static const char *NVS_KEY_TOPIC = "mqtt_topic";
+static const char *NVS_KEY_MQTT_USERNAME = "mqtt_user";
+static const char *NVS_KEY_MQTT_PASSWORD = "mqtt_pass";
 static const char *NVS_KEY_WIFI_SSID = "wifi_ssid";
 static const char *NVS_KEY_WIFI_PASS = "wifi_pass";
 
@@ -76,6 +78,16 @@ void claude_config_get_mqtt_topic(char *buffer, size_t buffer_size)
     read_string(NVS_KEY_TOPIC, buffer, buffer_size, CONFIG_CLAUDE_MQTT_TOPIC);
 }
 
+void claude_config_get_mqtt_username(char *buffer, size_t buffer_size)
+{
+    read_string(NVS_KEY_MQTT_USERNAME, buffer, buffer_size, "");
+}
+
+void claude_config_get_mqtt_password(char *buffer, size_t buffer_size)
+{
+    read_string(NVS_KEY_MQTT_PASSWORD, buffer, buffer_size, "");
+}
+
 void claude_config_get_wifi_ssid(char *buffer, size_t buffer_size)
 {
     read_string(NVS_KEY_WIFI_SSID, buffer, buffer_size, "");
@@ -94,6 +106,38 @@ bool claude_config_set_mqtt_broker_uri(const char *value)
 bool claude_config_set_mqtt_topic(const char *value)
 {
     return write_string(NVS_KEY_TOPIC, value);
+}
+
+bool claude_config_set_mqtt_credentials(const char *username, const char *password)
+{
+    if (username == nullptr || password == nullptr) {
+        return false;
+    }
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        return false;
+    }
+
+    if (username[0] != '\0') {
+        err = nvs_set_str(handle, NVS_KEY_MQTT_USERNAME, username);
+    } else {
+        err = nvs_erase_key(handle, NVS_KEY_MQTT_USERNAME);
+    }
+    if (err == ESP_OK) {
+        if (password[0] != '\0') {
+            err = nvs_set_str(handle, NVS_KEY_MQTT_PASSWORD, password);
+        } else {
+            err = nvs_erase_key(handle, NVS_KEY_MQTT_PASSWORD);
+        }
+    }
+    if (err == ESP_OK) {
+        err = nvs_commit(handle);
+    }
+    nvs_close(handle);
+
+    return err == ESP_OK;
 }
 
 bool claude_config_set_wifi_credentials(const char *ssid, const char *password)

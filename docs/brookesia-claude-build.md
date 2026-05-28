@@ -13,7 +13,7 @@ firmware/brookesia-claude
 This project is based on Waveshare's `03_esp-brookesia` example and adds:
 
 - `Claude` status app
-- `WiFi` settings app
+- `WiFi` settings app with live status and service controls
 - Wi-Fi bootstrap/config storage services
 - MQTT subscriber for Claude Code hook status
 - HTTP config page for Wi-Fi and MQTT settings
@@ -120,8 +120,10 @@ Config URL: http://192.168.4.1/
 ```
 
 The exact SSID suffix is based on the board MAC and may change if using another board.
+The hotspot is WPA2-protected, and the `WiFi` app now reports the station IP, config web server state, and MQTT client state.
 
 ## Current Limitations
 
 - The config web page stores Wi-Fi and MQTT settings in NVS, but after saving Wi-Fi settings the simplest expected flow is to restart the board.
+- The config web page can be stopped and restarted from the `WiFi` app.
 - XiaoZhi has not been integrated into this firmware yet; this is the Brookesia multi-app base with Claude status/MQTT added.
