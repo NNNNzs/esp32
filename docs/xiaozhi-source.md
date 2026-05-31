@@ -50,6 +50,16 @@ This board entry sets:
 - PMIC: AXP2101
 - Touch: CST816S/CST816 family driver over I2C
 
+Physical button mapping found in the board config:
+
+- `BOOT_BUTTON_GPIO` -> `GPIO_NUM_0`
+- `PWR_BUTTON_GPIO` -> `GPIO_NUM_41`
+
+Current firmware note:
+
+- The Brookesia firmware in this repository currently initializes touch input, but it does not expose the board's external buttons as active UI inputs.
+- The BSP header for `firmware/brookesia-claude` also reports `BSP_CAPS_BUTTONS 0`, so the two right-side buttons are effectively unused by the current firmware build.
+
 ### Waveshare AIChats Collection
 
 Online reference:

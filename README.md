@@ -130,6 +130,11 @@ Restore writes the official image at `0x0` and replaces the current firmware. Re
 - XiaoZhi source: `vendor/xiaozhi-esp32`
 - Waveshare XiaoZhi board directory: `vendor/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.83`
 
+Board button notes:
+
+- The two right-side physical buttons on the Waveshare board map to XiaoZhi board pins `BOOT_BUTTON_GPIO = GPIO_NUM_0` and `PWR_BUTTON_GPIO = GPIO_NUM_41`.
+- In the current Brookesia firmware, the BSP exposes touch input but does not enable external button input, so those physical buttons are not wired into the UI yet.
+
 XiaoZhi is not integrated into the Brookesia firmware yet. It is currently reference material for later provisioning and assistant work.
 
 ## Generated Content
