@@ -1,7 +1,7 @@
 param(
   [string]$Port = $env:ESP32_PORT,
   [int]$BaudRate = 921600,
-  [string]$Firmware = "$PSScriptRoot\official-firmware\ESP32-S3-Touch-LCD-1.83-xiaozhi-251024.bin"
+  [string]$Firmware = "$PSScriptRoot\..\firmware\releases\waveshare-official-xiaozhi-20251024\ESP32-S3-Touch-LCD-1.83-xiaozhi-251024.bin"
 )
 
 if ([string]::IsNullOrWhiteSpace($Port)) {

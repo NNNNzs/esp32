@@ -1,34 +1,28 @@
-# Multi-App Claude MQTT Plan
+# Brookesia 多应用与 Claude MQTT 方案
 
-Goal: build a multi-app firmware based on Waveshare `03_esp-brookesia`, keep phone-based Wi-Fi provisioning, add an MQTT-driven Claude Code status app, and later integrate XiaoZhi assistant behavior.
+本方案说明如何以 Waveshare `03_esp-brookesia` 为基础，保留手机式 Wi-Fi 配网界面，增加 MQTT 驱动的 Claude Code 状态应用。小智 XiaoZhi 当前作为独立固件维护，尚未并入 Brookesia。
 
-## Product Shape
+## 产品形态
 
-Base firmware:
+固件基础：
 
 ```text
 vendor/waveshare-demo/examples/ESP-IDF/03_esp-brookesia
 ```
 
-Target user experience:
+目标体验：
 
-- Device boots into a phone-like multi-app launcher.
-- Existing demo apps still work where practical: calculator, music player, draw panel.
-- A `WiFi` app can enter phone provisioning mode.
-- A `Claude` app shows Claude Code status from MQTT.
-- Later, a `XiaoZhi` app provides assistant behavior.
+- 开机进入手机式多应用启动器。
+- 尽可能保留计算器、音乐和画板示例应用。
+- 提供 `WiFi` 应用以查看网络状态和进入配网。
+- 提供 `Claude` 应用，通过 MQTT 显示 Claude Code 状态。
+- XiaoZhi 助手继续由单独固件提供；本方案不把小智固件当作 Brookesia 插件。
 
-## Recommended Architecture
+## 架构建议
 
-Use Brookesia as the main system, not XiaoZhi.
+Brookesia 作为多应用系统，小智作为独立语音助手固件。Brookesia 示例已有多应用壳，而 XiaoZhi 本身是完整应用/固件，两者都需要管理显示、LVGL、音频、Wi-Fi、NVS 和应用状态。
 
-Reason:
-
-- The user wants a multi-app launcher.
-- `03_esp-brookesia` is already structured as a multi-app shell.
-- XiaoZhi is closer to a full firmware/application than a small plug-in app.
-
-Core services to add under `03_esp-brookesia`:
+建议服务与应用模块：
 
 ```text
 components/services/network_service
@@ -37,67 +31,44 @@ components/apps/claude_status
 components/apps/wifi_settings
 ```
 
-### Network Service
+### 网络服务
 
-Purpose: provide Wi-Fi station mode and phone provisioning for all apps.
+网络服务为各应用提供 Wi-Fi Station 模式和手机配网：
 
-Current first implementation:
+- 使用 ESP-IDF 原生 Wi-Fi 服务作为首版实现，源码位置可为 `components/claude_wifi_service`。
+- NVS 中有 Wi-Fi 配置时，启动 Station 模式。
+- 没有 Wi-Fi 配置时，启动 `ClaudeConfig-XXXX` 配网热点。
+- 在 `http://192.168.4.1/` 提供配置页面，并将 Wi-Fi 和 MQTT 配置保存到 NVS。
+- XiaoZhi 的 `vendor/xiaozhi-esp32/main/boards/common/wifi_board.cc` 可作为行为参考。
 
-- Use a native ESP-IDF Wi-Fi service in `components/claude_wifi_service`.
-- If saved Wi-Fi exists in NVS, boot as station.
-- If no saved Wi-Fi exists, boot as an open config AP named `ClaudeConfig-XXXX`.
-- The config page is served at `http://192.168.4.1/`.
-- The same page saves Wi-Fi and MQTT config to NVS.
+首版可复用 XiaoZhi 使用的 `78/esp-wifi-connect` 组件，但不要把 XiaoZhi 整个 `Application` 类搬入 Brookesia。应以 Brookesia 服务封装 Wi-Fi 事件，避免两套固件架构争夺网络和界面资源。
 
-Best source to reuse:
+### MQTT 状态服务
 
-```text
-vendor/xiaozhi-esp32/main/boards/common/wifi_board.cc
-```
+MQTT 服务订阅 Claude Code 状态并通知 `Claude` 应用：
 
-Important XiaoZhi behavior to preserve:
+- 固件优先从 NVS 读取 Broker 和 Topic；无配置时回退到 `menuconfig` 默认值。
+- Wi-Fi 配网页可编辑 Wi-Fi 与 MQTT 设置。
+- PC Hook 脚本从环境变量读取 MQTT 设置。
+- MQTT 客户端处理断线重连和退避。
 
-- If saved Wi-Fi exists, connect automatically.
-- If no saved Wi-Fi exists, start AP provisioning.
-- AP SSID prefix is currently `Xiaozhi`.
-- Phone connects to the AP and opens the provisioning web page.
-- Manual reconfiguration calls `EnterWifiConfigMode()`.
-
-Implementation preference:
-
-- Reuse the same `78/esp-wifi-connect` component XiaoZhi uses.
-- Do not import the whole XiaoZhi `Application` class into Brookesia for phase 1.
-- Wrap Wi-Fi events in a small Brookesia-friendly service.
-- Treat the native service as a bootstrap implementation that can be replaced by `esp-wifi-connect` after the ESP-IDF build environment is working.
-
-### MQTT Status Service
-
-Purpose: subscribe to Claude Code status messages and notify the Claude status app.
-
-Configuration should be centralized:
-
-- Firmware reads MQTT config from NVS first.
-- If NVS has no value, firmware falls back to `menuconfig` defaults.
-- The Wi-Fi/provisioning web page should eventually edit both Wi-Fi and MQTT settings.
-- The PC hook script reads MQTT settings from environment variables.
-
-Initial topic proposal:
+建议 Topic：
 
 ```text
 claudecode/device/<device_id>/status
 ```
 
-Payload proposal:
+建议消息格式：
 
 ```json
 {
   "state": "thinking",
-  "text": "optional short text",
+  "text": "可选的简短文本",
   "ts": 1780000000
 }
 ```
 
-Supported states:
+状态值：
 
 ```text
 thinking
@@ -108,131 +79,54 @@ error
 idle
 ```
 
-PC-side Claude Code hooks should publish MQTT messages instead of writing to serial.
+PC 端 Claude Code Hook 通过 MQTT 发布状态，不直接写串口。
 
-### Claude Status App
+### Claude 状态应用
 
-Purpose: visual status display.
+状态应用在屏幕上呈现当前状态：
 
-Display style:
+- 使用小尺寸单色像素机器人图标，可用 LVGL 标签或位图资源实现。
+- `thinking` 使用 3 至 4 帧动画。
+- `approval` 显示静态提醒状态。
+- `working` 显示扫描动画。
+- `done` 显示已完成状态。
+- 优先使用 32×32 或 48×48 索引色图标，并控制资源占用。
 
-- Use a small monochrome/pixel-art robot face inspired by the Claude Code icon style.
-- Store it as LVGL labels or bitmap assets.
-- Avoid relying on serial.
-- Animate `thinking` with 3-4 frames.
+## XiaoZhi 与 Brookesia 的关系
 
-Example thinking animation idea:
+当前两个固件分别构建和烧录。将 XiaoZhi 集成进 Brookesia 属于后续开发，不是现有小智固件的功能。
 
-```text
-[ o_o ]  ->  [ o_O ]  ->  [ O_o ]  ->  [ o_o ]
-```
+直接集成的主要难点：
 
-Better final version:
+- Brookesia 示例使用 LVGL 8.4.0，小智当前源码使用约 LVGL 9.5.0。
+- 两边都需要管理显示、LVGL 主循环、音频编解码、Wi-Fi、NVS 和应用状态。
+- 直接复制 XiaoZhi 代码进入 `components/apps` 容易出现版本冲突和维护困难。
 
-- Use a 32x32 or 48x48 indexed bitmap icon.
-- Add a tiny animated sparkle/dot orbit during `thinking`.
-- Show `APPROVAL` as a still alert state.
-- Show `WORKING` with a scanning line.
-- Show `DONE` with a calm completed state.
+若将来进行集成，可先在 Brookesia 启动器中增加仅用于配置/状态展示的 XiaoZhi 入口，再逐步移植网络协议、麦克风采集、扬声器播放、助手状态和 MCP 工具。直接把 Brookesia 升级到 LVGL 9 并移入小智内部模块的成本更高。
 
-## XiaoZhi App Integration Plan
+## 实施步骤
 
-Treat XiaoZhi as phase 2.
+1. 保留官方整片镜像和各固件烧录包，进行主要固件试验前先备份设备 Flash。
+2. 构建并验证 Brookesia 启动器、触摸屏和示例应用。
+3. 增加 Wi-Fi 配网服务和 `WiFi` 应用，支持查看状态、进入配网、清除 Wi-Fi、编辑 MQTT Broker/Topic。
+4. 增加 MQTT 客户端、NVS 配置和重连机制。
+5. 增加 `ClaudeStatus` 应用，呈现状态图标与文本。
+6. 将 PC Hook 脚本改为 MQTT 发布，并记录调试日志。
+7. 在 MQTT 状态功能稳定后，再评估是否把小智助手功能移入 Brookesia。
 
-Reason:
+## 主要风险
 
-- Brookesia demo uses LVGL 8.4.0.
-- XiaoZhi currently depends on LVGL about 9.5.0.
-- Both systems want ownership of display, LVGL loop, audio codec, Wi-Fi, NVS, and app state.
-- Directly copying XiaoZhi into `components/apps` is likely to fail or become hard to maintain.
+- Brookesia 与 XiaoZhi 的 LVGL 版本不一致。
+- 两套固件同时管理音频编解码器或 Wi-Fi 时会发生资源冲突。
+- 合并多应用、MQTT、语音和界面资源会增加 Flash、RAM 压力。
+- 目前没有找到与 Waveshare 官方整合固件完全对应的公开完整源码树。
 
-Practical route:
+## 当前目标
 
-1. Keep Brookesia as the launcher.
-2. Extract or recreate the Wi-Fi provisioning first.
-3. Add Claude MQTT status app.
-4. Add a `XiaoZhi` launcher app that initially shows setup/status.
-5. Later port XiaoZhi features one by one:
-   - network/protocol connection
-   - microphone capture
-   - speaker playback
-   - assistant state display
-   - MCP tools
-
-Hard route:
-
-- Upgrade Brookesia firmware to LVGL 9 and integrate XiaoZhi internals directly.
-- This may require modifying Espressif Brookesia examples and all current apps.
-
-## Development Phases
-
-### Phase 0 - Recovery Safety
-
-- Keep the official full flash image in `recovery/official-firmware`.
-- Keep restore script working.
-- Before testing each major firmware, run a fresh flash backup if the board contains anything valuable.
-
-### Phase 1 - Brookesia Build Baseline
-
-- Build `03_esp-brookesia` unchanged.
-- Flash and verify display, touch, launcher, and bundled apps.
-- Record exact ESP-IDF version and dependencies.
-
-### Phase 2 - Wi-Fi Provisioning
-
-- Add network service using the XiaoZhi-style `WifiManager`.
-- Boot into provisioning if no Wi-Fi is saved.
-- Reuse or extend the same phone web flow to save Claude MQTT settings.
-- Add `WiFi` app with actions:
-  - show current Wi-Fi status
-  - enter provisioning mode
-  - clear saved Wi-Fi
-  - edit MQTT broker/topic
-
-### Phase 3 - MQTT Transport
-
-- Add MQTT client service.
-- Store MQTT broker config in NVS.
-- Subscribe to the Claude status topic.
-- Add reconnect/backoff handling.
-
-### Phase 4 - Claude Status App
-
-- Add `ClaudeStatus` Brookesia app.
-- Render status icon and text.
-- Add thinking animation frames.
-- Keep the latest status visible even if the app is not currently open, if Brookesia allows a notification/status mechanism.
-
-### Phase 5 - PC Hook Publisher
-
-- Replace serial hook script with MQTT publisher.
-- Keep a log file for debugging.
-- Publish Claude Code hook events:
-  - prompt submitted -> `thinking`
-  - pre tool use -> `working`
-  - permission request -> `approval`
-  - stop -> `done`
-  - error path -> `error`
-
-### Phase 6 - XiaoZhi Integration
-
-- First integrate only the provisioning behavior and a XiaoZhi launcher tile.
-- Then evaluate full assistant port after MQTT Claude status works.
-
-## Main Risks
-
-- LVGL version mismatch between Brookesia and XiaoZhi.
-- Audio codec ownership conflicts.
-- Wi-Fi manager conflicts if both systems initialize Wi-Fi independently.
-- Flash/RAM pressure when combining Brookesia, MQTT, assets, and XiaoZhi.
-- The official all-in-one firmware source does not appear to be published as one clean repository.
-
-## First Implementation Target
-
-The first working milestone should be:
+Brookesia 的目标组合为：
 
 ```text
-Brookesia launcher + phone Wi-Fi provisioning + MQTT Claude status app
+Brookesia 启动器 + 手机 Wi-Fi 配网 + MQTT Claude 状态应用
 ```
 
-Do not integrate full XiaoZhi assistant until this milestone is stable.
+XiaoZhi 语音助手继续保留为独立固件，直到 Brookesia 状态功能稳定且集成方案明确。

@@ -1,213 +1,53 @@
-# XiaoZhi Source Notes
+# XiaoZhi 源码与官方镜像说明
 
-This project now keeps local copies of the likely source code for the official XiaoZhi firmware path.
+## 项目中的源码副本
 
-## What We Found
-
-### Upstream XiaoZhi ESP32 Source
-
-Local path:
+XiaoZhi ESP32 上游源码副本位于：
 
 ```text
 vendor/xiaozhi-esp32
 ```
 
-Remote:
+上游仓库：<https://github.com/78/xiaozhi-esp32.git>
 
-```text
-https://github.com/78/xiaozhi-esp32.git
-```
-
-Current local commit:
-
-```text
-331d69b
-```
-
-Important board path for this device:
+当前源码版本提交为 `331d69b`。本开发板对应的板级目录：
 
 ```text
 vendor/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.83
 ```
 
-Key files:
+主要文件为 `config.json`、`config.h`、`esp32-s3-touch-lcd-1.83.cc` 和 `README.md`。板型配置指定 Waveshare 厂商、ESP32-S3 目标、ST7789 屏幕、240×284 分辨率、ES8311/ES7210 音频芯片、AXP2101 电源管理芯片和 CST816 系列触摸驱动。
+
+板级配置中，BOOT 键使用 `GPIO_NUM_0`，PWR 键使用 `GPIO_NUM_41`。当前 Brookesia 固件启用了触摸，但没有启用外部实体按键输入。
+
+## Waveshare AIChats 源码集合
+
+参考仓库：<https://github.com/waveshareteam/ESP32-AIChats>。该仓库收集不同版本的 Waveshare XiaoZhi 固件包，并列出 `ESP32-S3-Touch-LCD-1.83` 支持信息。曾短暂下载该仓库用于查找资料，因约 1.6GB 且只用于参考，之后已从 `vendor/` 移除。
+
+## Waveshare 开发板示例
+
+源码副本位于 `vendor/waveshare-demo`，上游仓库为 <https://github.com/waveshareteam/ESP32-S3-Touch-LCD-1.83.git>。它是开发板示例工程，包含 Arduino/ESP-IDF 示例和官方预编译恢复镜像，不是 XiaoZhi 应用源码。
+
+## 官方恢复镜像
+
+官方预编译镜像归档在：
 
 ```text
-config.json
-config.h
-esp32-s3-touch-lcd-1.83.cc
-README.md
+firmware/releases/waveshare-official-xiaozhi-20251024/ESP32-S3-Touch-LCD-1.83-xiaozhi-251024.bin
 ```
 
-This board entry sets:
+`esptool image-info` 检测到 ESP32-S3、16MB Flash、ESP-IDF `v5.5.1-dirty`，编译时间为 2025-10-21 11:21:12。该文件是固件，不是源码；官方没有标注构建它所用源码的确切提交，因此本地 `vendor/xiaozhi-esp32` 只能作为可编译和二次开发的源码基础，不能视为该镜像的逐字节对应源码。
 
-- Manufacturer: `waveshare`
-- Target: `esp32s3`
-- Build name: `esp32-s3-touch-lcd-1.83`
-- Display: ST7789 over SPI
-- Display size: `240 x 284`
-- Audio: ES8311 + ES7210
-- PMIC: AXP2101
-- Touch: CST816S/CST816 family driver over I2C
+镜像包含 `xiaozhi`、`XIAOZHI_STATE_EVENTS`、小智 OTA 地址和 Waveshare 板级类名等字符串，说明它很可能基于 XiaoZhi 或 Waveshare 对 XiaoZhi 的分支构建。同时镜像还包含 `esp_brookesia_phone`、`app_launcher`、`navigation_bar`、`recents_screen` 和 `status_bar` 等标记，表明官方整合镜像还包含多应用界面内容。
 
-Physical button mapping found in the board config:
+二进制记录的源码路径为 `./main/boards/waveshare-s3-touch-lcd-1.83/esp32-s3-touch-lcd-1.83.cc`，而当前上游副本的路径为 `main/boards/waveshare/esp32-s3-touch-lcd-1.83/esp32-s3-touch-lcd-1.83.cc`。因此不能认定官方镜像就是用当前本地源码版本构建的。
 
-- `BOOT_BUTTON_GPIO` -> `GPIO_NUM_0`
-- `PWR_BUTTON_GPIO` -> `GPIO_NUM_41`
+## 官方多应用固件源码线索
 
-Current firmware note:
+本地 `vendor/waveshare-demo/examples/ESP-IDF/03_esp-brookesia` 包含基于 Espressif Brookesia 的多应用界面示例，包括计算器、音乐、画板、简单电话和 Squareline 应用。相邻示例还包含重力水平仪、麦克风频谱分析仪和 TF 卡影音播放器。
 
-- The Brookesia firmware in this repository currently initializes touch input, but it does not expose the board's external buttons as active UI inputs.
-- The BSP header for `firmware/brookesia-claude` also reports `BSP_CAPS_BUTTONS 0`, so the two right-side buttons are effectively unused by the current firmware build.
+官方恢复镜像同时具有 XiaoZhi 和 Brookesia 相关标记；公开资料中没有发现一个完整源码树能够与该整合镜像精确对应。应把它视为 Waveshare 发布的预编译集成固件，不能直接从单一公开源码目录还原。
 
-### Waveshare AIChats Collection
+## 二次开发方向
 
-Online reference:
-
-```text
-https://github.com/waveshareteam/ESP32-AIChats
-```
-
-This repository collects Waveshare-specific XiaoZhi packages by version and lists `ESP32-S3-Touch-LCD-1.83` as supported.
-
-It was briefly cloned during source discovery, but removed from `vendor/` because the checkout was about 1.6GB and was only needed as a reference.
-
-### Waveshare Board Demo Source
-
-Local path:
-
-```text
-vendor/waveshare-demo
-```
-
-Remote:
-
-```text
-https://github.com/waveshareteam/ESP32-S3-Touch-LCD-1.83.git
-```
-
-This is the board sample/demo repository, not the XiaoZhi application source. It contains Arduino and ESP-IDF demos plus the prebuilt official firmware image.
-
-## Relationship To The Official Firmware Bin
-
-The official recovery image we saved is:
-
-```text
-recovery/official-firmware/ESP32-S3-Touch-LCD-1.83-xiaozhi-251024.bin
-```
-
-This is compiled firmware, not source code. `esptool image-info` reports:
-
-- ESP32-S3 image
-- 16MB flash image
-- ESP-IDF `v5.5.1-dirty`
-- Compile time `Oct 21 2025 11:21:12`
-
-The most likely editable source base is `vendor/xiaozhi-esp32`, using the board support under:
-
-```text
-main/boards/waveshare/esp32-s3-touch-lcd-1.83
-```
-
-The exact source commit used by Waveshare for `ESP32-S3-Touch-LCD-1.83-xiaozhi-251024.bin` is not stated in the firmware filename or local docs. Treat the local upstream clone as the current source base, not a byte-for-byte match to that firmware.
-
-## Is The Official Firmware Built From XiaoZhi?
-
-Short answer: very likely yes.
-
-Evidence extracted from the official firmware image:
-
-- The firmware filename contains `xiaozhi`.
-- `esptool image-info` detects an ESP32-S3 image with ESP-IDF `v5.5.1-dirty`, matching the kind of ESP-IDF project XiaoZhi uses.
-- The binary contains strings such as `xiaozhi`, `Xiaozhi`, `XIAOZHI_STATE_EVENTS`, and `https://api.tenclass.net/xiaozhi/ota/`.
-- The binary contains the MCP initialization fragment:
-
-```text
-"type":"mcp"
-"serverInfo":{"name":"waveshare-s3-touch-lcd-1.83"
-```
-
-- The binary contains the board class/tag string:
-
-```text
-WaveshareEsp32s3TouchLCD1inch83
-```
-
-which also exists in:
-
-```text
-vendor/xiaozhi-esp32/main/boards/waveshare/esp32-s3-touch-lcd-1.83/esp32-s3-touch-lcd-1.83.cc
-```
-
-- The binary contains matching board initialization logs and source symbols, including:
-
-```text
-Init AXP2101
-Initialize touch controller
-Touch panel initialized successfully
-esp_lcd_new_panel_st7789
-esp_lcd_touch_new_i2c_cst816s
-ES8311
-ES7210
-```
-
-These line up with the current XiaoZhi board source for this device.
-
-Important caveat: the binary contains a source path like:
-
-```text
-./main/boards/waveshare-s3-touch-lcd-1.83/esp32-s3-touch-lcd-1.83.cc
-```
-
-while the currently cloned upstream source uses:
-
-```text
-main/boards/waveshare/esp32-s3-touch-lcd-1.83/esp32-s3-touch-lcd-1.83.cc
-```
-
-So the official firmware was almost certainly built from the XiaoZhi codebase or a close Waveshare fork, but not necessarily from the exact current checkout in `vendor/xiaozhi-esp32`.
-
-## Official Multi-App Firmware Search
-
-The factory experience appears to be more than the upstream XiaoZhi app alone.
-
-What is available locally:
-
-- `vendor/xiaozhi-esp32` contains the XiaoZhi application and board support for this device.
-- `vendor/waveshare-demo/examples/ESP-IDF/03_esp-brookesia` contains a phone-like multi-app shell using Espressif `esp-brookesia`.
-- `03_esp-brookesia/main/main.cpp` installs these apps into the shell:
-  - `Calculator`
-  - `MusicPlayer`
-  - `Drawpanel`
-  - `PhoneAppSimpleConf`
-  - `PhoneAppSquareline`
-- `vendor/waveshare-demo/examples/ESP-IDF/04_Immersive_block` is the QMI8658 gravity/level-style block demo.
-- `vendor/waveshare-demo/examples/ESP-IDF/05_Spec_Analyzer` is the microphone audio spectrum analyzer demo.
-- `vendor/waveshare-demo/examples/ESP-IDF/06_videoplayer` is the TF-card AVI video/audio player demo.
-
-What the official documentation says:
-
-- The Waveshare wiki lists ESP-IDF demos `03_esp-brookesia`, `04_Immersive_block`, `05_Spec_Analyzer`, and `06_videoplayer`.
-- The same page says the `Firmware` directory contains prebuilt test firmware for direct flashing.
-- The XiaoZhi upstream release notes mention `ESP32-S3-Touch-LCD-1.83` as a newly added third-party board, but do not describe Waveshare's multi-app test shell.
-
-What the official recovery binary suggests:
-
-- The binary contains XiaoZhi strings and the matching Waveshare XiaoZhi board class.
-- The same binary also contains `esp_brookesia_phone`, `app_launcher`, `navigation_bar`, `recents_screen`, and `status_bar` strings.
-
-Conclusion:
-
-The closest public sources are split across two places: XiaoZhi upstream for the assistant app, and Waveshare's ESP-IDF demos for the multi-app UI and hardware tests. I did not find a single public source tree that exactly corresponds to the all-in-one factory firmware image `ESP32-S3-Touch-LCD-1.83-xiaozhi-251024.bin`. Treat that image as a Waveshare-built integration or fork, not as something we can edit directly from one complete released source package.
-
-## Next Development Direction
-
-To keep the official XiaoZhi system and add Claude Code status display behavior, modify the XiaoZhi source rather than patching the `.bin`.
-
-Candidate integration points:
-
-- Add a new MCP tool in `esp32-s3-touch-lcd-1.83.cc`, similar to `self.system.reconfigure_wifi`.
-- Add a serial command listener that changes the LVGL display state.
-- Add a small overlay/status component in the display layer.
-
-The cleanest first experiment is adding a new MCP or serial command that displays `thinking`, `approval`, `working`, and `done` without replacing the whole XiaoZhi UI.
+当前已归档的 XiaoZhi 2.2.6 烧录包是独立语音助手，Brookesia Claude 烧录包则是独立多应用状态显示固件。若要在小智助手中增加 Claude 状态显示，应在 XiaoZhi 源码上开发，例如增加 MCP 工具、串口命令监听或 LVGL 状态覆盖层，而不是直接修改 `.bin` 文件。
